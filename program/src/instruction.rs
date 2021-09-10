@@ -25,7 +25,11 @@ impl TicketSellingPoolInstructions {
         let (tag, rest) = input.split_first().ok_or(InvalidInstruction)?;
 
         Ok(match tag {
-            0 => {
+                //First byte in data:
+                //0:Initialize pool
+                //1:Buy
+
+            0 => { 
                 let (price, rest) = Self::unpack_u64(rest).unwrap();
                 let (fee, rest) = Self::unpack_u8(rest).unwrap();
                 let amount = Self::unpack_u64(rest).unwrap().0;
@@ -40,7 +44,7 @@ impl TicketSellingPoolInstructions {
                     total_amount: amount,
                 }
             }
-            1 => Self::Buy {},
+            1 => Self::Buy {}, 
             _ => return Err(InvalidInstruction.into()),
         })
     }
