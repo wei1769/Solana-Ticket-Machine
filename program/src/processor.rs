@@ -25,7 +25,6 @@ impl Processor {
         instruction_data: &[u8],
     ) -> ProgramResult {
         let instruction = TicketSellingPoolInstructions::unpack(instruction_data)?;
-        msg!(&*format!("program id: {}", program_id));
         check_program_account(program_id)?;
         match instruction {
             TicketSellingPoolInstructions::InitPool {
@@ -55,7 +54,7 @@ impl Processor {
         let manager = next_account_info(account_info_iter)?;
         let fee_receiver = next_account_info(account_info_iter)?;
         let mut pool_info = Pool::unpack_unchecked(&pool_id.data.borrow())?;
-        check_program_account(pool_id.key)?;
+        check_program_account(pool_id.owner)?;
         if pool_info.account_type != 0 {
             return Err(ProgramError::AccountAlreadyInitialized);
         }
@@ -104,7 +103,9 @@ impl Processor {
             msg!("All account should be writable");
             return Err(TicketMachineError::AccountNotWritable.into());
         }
-        check_program_account(pool_id.key)?;
+        check_program_account(pool_id.owner)?;
+        check_program_account(ticket_account.owner)?;
+
         let mut pool_info = Pool::unpack_unchecked(&pool_id.data.borrow())?;
 
         let mut ticket_info = Ticket::unpack_unchecked(&ticket_account.data.borrow())?;

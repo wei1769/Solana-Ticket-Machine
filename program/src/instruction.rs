@@ -30,7 +30,7 @@ impl TicketSellingPoolInstructions {
                 let (fee, rest) = Self::unpack_u8(rest).unwrap();
                 let amount = Self::unpack_u64(rest).unwrap().0;
                 let message = format(format_args!(
-                    "price: {:?} fee: {:?} amount: {:?}",
+                    "price: {:?} lamport, fee: {:?}%, amount: {:?}",
                     price, fee, amount
                 ));
                 msg!(&message);

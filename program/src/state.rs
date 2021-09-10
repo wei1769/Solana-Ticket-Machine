@@ -39,7 +39,7 @@ impl IsInitialized for Ticket{
 impl Pack for Ticket {
     const LEN: usize = 73;
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-        msg!("unpack ok");
+        
         let src = array_ref![src, 0, Ticket::LEN];
         let(_account_type,
             _pool_id,
@@ -97,7 +97,7 @@ impl IsInitialized for Pool{
 impl Pack for Pool {
     const LEN: usize = 90;
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-        msg!("unpack ok");
+        
         let src = array_ref![src, 0, Pool::LEN];
         let(_account_type,
             _manager,
