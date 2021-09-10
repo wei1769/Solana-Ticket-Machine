@@ -1,6 +1,7 @@
 import { publicKey, struct, u32, u64, u8 } from "@project-serum/borsh";
 import {
   Account,
+  AccountInfo,
   AccountMeta,
   Connection,
   PublicKey,
@@ -13,6 +14,7 @@ import { TokenAmount } from "./math";
 
 // TODO
 const manager_private_key = [];
+
 const managerAccount = new Account(manager_private_key);
 
 const POOL_ID = "D9ioyVKEQkjbEpQFcQPDHQkTCfuKJU8QLzN6xcbr7LAe";
@@ -135,6 +137,62 @@ export async function initPool(
   );
 }
 
+class PoolInfo {
+  account_type: number;
+  manager: PublicKey;
+  fee_reciever: PublicKey;
+  total_amount: number;
+  price: number;
+  fee: number;
+  current_number: number;
+
+  constructor(
+    account_type: number,
+    manager: PublicKey,
+    fee_reciever: PublicKey,
+    total_amount: number,
+    price: number,
+    fee: number,
+    current_number: number
+  ) {
+    this.account_type = account_type;
+    this.manager = manager;
+    this.fee_reciever = fee_reciever;
+    this.total_amount = total_amount;
+    this.price = price;
+    this.fee = fee;
+    this.current_number = current_number;
+  }
+}
+
+// pub account_type: u8,//1 is pool size:1
+//     pub manager: Pubkey,//size:32
+//     pub fee_reciever: Pubkey,//size:32
+//     pub total_amount: u64,//size:8
+//     pub price:  u64,//size:8
+//     pub fee: u8,//size:1
+//     pub current_number: u64//size:8
+function parsePoolInfoData(data: any) {
+  let {
+    account_type,
+    manager,
+    fee_reciever,
+    total_amount,
+    price,
+    fee,
+    current_number,
+  } = POOL_LAYOUT.decode(data);
+  return new PoolInfo(
+    account_type,
+    new PublicKey(manager),
+    new PublicKey(fee_reciever),
+    total_amount,
+    price,
+    fee,
+    current_number
+  );
+}
+
 // let { transaction, ticketKeyPair } = buy();
 export async function buy(pool_id: string, buyer: Account) {
   const ticketProgramId = new PublicKey(TICKET_PUBLIC_KEY);
@@ -158,17 +216,69 @@ export async function buy(pool_id: string, buyer: Account) {
   );
 
   // get pool info
-  let poolInfo = await connection.getAccountInfo(new PublicKey(pool_id));
-  console.log("poolInfo", poolInfo);
+  let poolInfo: AccountInfo<Buffer> | null = await connection.getAccountInfo(
+    new PublicKey(pool_id)
+  );
+  if (!poolInfo) throw new Error("Pool id not found! " + pool_id);
+  else console.log("poolInfo", parsePoolInfoData(poolInfo.data));
 
   // add buy instruction to transaction
+  const keys: AccountMeta[] = [
+    { pubkey: new PublicKey(pool_id), isSigner: false, isWritable: true },
+    {
+      pubkey: parsePoolInfoData(poolInfo.data).manager,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: new PublicKey(FEE_RECEIVER_PUBLIC_KEY),
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: ticketPublicKey,
+      isSigner: true,
+      isWritable: true,
+    },
+    {
+      pubkey: buyer.publicKey,
+      isSigner: true,
+      isWritable: true,
+    },
+    {
+      pubkey: new PublicKey("11111111111111111111111111111111"),
+      isSigner: false,
+      isWritable: false,
+    },
+  ];
+
+  const dataLayout = struct([u8("instruction")]);
+  const data = Buffer.alloc(dataLayout.span);
+  dataLayout.encode(
+    {
+      instruction: 1,
+    },
+    data
+  );
+  transaction.add(
+    new TransactionInstruction({
+      keys,
+      programId: ticketProgramId,
+      data,
+    })
+  );
 
   // return { transaction, newTicketAccount };
-  await sendAndConfirmTransaction(connection, transaction, [newTicketAccount], {
-    skipPreflight: false,
-    commitment: "recent",
-    preflightCommitment: "recent",
-  });
+  await sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [newTicketAccount, buyer],
+    {
+      skipPreflight: false,
+      commitment: "recent",
+      preflightCommitment: "recent",
+    }
+  );
 }
 
 // I'm the pool manager, so fill in my own public key
@@ -176,7 +286,7 @@ let manager = managerAccount;
 let price = 696969;
 let fee = 23;
 let amount = 10;
-initPool(manager, price, fee, amount);
+// initPool(manager, price, fee, amount);
 
 let pool_id = POOL_ID;
 let buyer = managerAccount;
