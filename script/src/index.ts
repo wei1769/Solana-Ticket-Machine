@@ -10,6 +10,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
+import BN from "bn.js";
 import { TokenAmount } from "./math";
 
 // TODO
@@ -128,7 +129,7 @@ export async function initPool(
   await sendAndConfirmTransaction(
     connection,
     transaction,
-    [newPoolAccount, managerAccount],
+    [managerAccount, newPoolAccount],
     {
       skipPreflight: false,
       commitment: "recent",
@@ -165,13 +166,6 @@ class PoolInfo {
   }
 }
 
-// pub account_type: u8,//1 is pool size:1
-//     pub manager: Pubkey,//size:32
-//     pub fee_reciever: Pubkey,//size:32
-//     pub total_amount: u64,//size:8
-//     pub price:  u64,//size:8
-//     pub fee: u8,//size:1
-//     pub current_number: u64//size:8
 function parsePoolInfoData(data: any) {
   let {
     account_type,
@@ -252,11 +246,13 @@ export async function buy(pool_id: string, buyer: Account) {
     },
   ];
 
-  const dataLayout = struct([u8("instruction")]);
+  const dataLayout = struct([u8("instruction"), u64("pay"), u64("fee")]);
   const data = Buffer.alloc(dataLayout.span);
   dataLayout.encode(
     {
       instruction: 1,
+      pay: new BN(parsePoolInfoData(poolInfo.data).price),
+      fee: new BN(parsePoolInfoData(poolInfo.data).fee),
     },
     data
   );
@@ -272,7 +268,7 @@ export async function buy(pool_id: string, buyer: Account) {
   await sendAndConfirmTransaction(
     connection,
     transaction,
-    [newTicketAccount, buyer],
+    [buyer, newTicketAccount],
     {
       skipPreflight: false,
       commitment: "recent",
