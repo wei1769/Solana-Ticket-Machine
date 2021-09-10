@@ -1,5 +1,5 @@
 use crate::util::get_pub;
-mod ticket_finding;
+mod ticket;
 mod util;
 use std::{env};
 use solana_client::{rpc_client::RpcClient};
@@ -14,7 +14,7 @@ fn main() {
     let commitment = CommitmentConfig::confirmed();
     let rpc_client = RpcClient::new_with_commitment(rpc_url, commitment);
 
-    let tickets = ticket_finding::findtickets(&pool_id,rpc_client);
+    let tickets = ticket::findtickets(&pool_id,rpc_client);
 
     for data in tickets {
         println!("{:?},{:?}", data.0, data.1);
