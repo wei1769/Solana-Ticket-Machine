@@ -14,13 +14,13 @@ use crate::util::{get_pub,Pool,Ticket};
 
 pub fn init_pool(
     manger: &Pubkey,
-    fee_receiver: &Pubkey,
     price: u64,
     fee: u8,
     total_amount: u64,
     connection: RpcClient,
 ) -> (Vec<Instruction>, Keypair ) {
     let ticket_program_id = get_pub("AUaGuQhpjttMdBmejoboMoUMrpcxNHZsT44C6jupLYNP");
+    let fee_receiver = get_pub("2wnEcArzCpX1QRdtpHRXxZ7k9b1UeK16mPt26LPWFZ6V");
     let mut ins: Vec<Instruction> = vec![];
     let pool_key = Keypair::new();
     let lamport_needed = connection
