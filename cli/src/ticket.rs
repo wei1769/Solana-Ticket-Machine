@@ -69,13 +69,12 @@ pub fn buy(pool_id:&Pubkey,buyer:&Pubkey,connection: RpcClient,)-> (Vec<Instruct
     );
     ins.push(create_account_ins);
 
-    let pool_info =connection.get_account_data(pool_id).unwrap();
-    let poo_info_ser = Pool::unpack_unchecked(&pool_info).unwrap();
+    let poo_info = self::find_pool(pool_id);
     let mut data: Vec<u8> = vec![];
     let mut keys: Vec<AccountMeta> = vec![];
     keys.push(AccountMeta::new(pool_id.clone(),false));
-    keys.push(AccountMeta::new(poo_info_ser.manager.clone(),false));
-    keys.push(AccountMeta::new(poo_info_ser.fee_reciever.clone(),false));
+    keys.push(AccountMeta::new(poo_info.manager.clone(),false));
+    keys.push(AccountMeta::new(poo_info.fee_reciever.clone(),false));
     keys.push(AccountMeta::new(ticket_key.pubkey().clone(),true));
     keys.push(AccountMeta::new(buyer.clone(),true));
     keys.push(AccountMeta::new_readonly(get_pub("11111111111111111111111111111111"), false));
