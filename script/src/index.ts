@@ -11,7 +11,6 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { TokenAmount } from "./math";
 
 // TODO
 const manager_private_key = [];
@@ -108,9 +107,9 @@ export async function initPool(
   dataLayout.encode(
     {
       instruction: 0,
-      price: new TokenAmount(price),
-      fee: new TokenAmount(fee),
-      total_amount: new TokenAmount(total_amount),
+      price: new BN(price),
+      fee: new BN(fee),
+      total_amount: new BN(total_amount),
     },
     data
   );
@@ -282,7 +281,7 @@ let manager = managerAccount;
 let price = 696969;
 let fee = 23;
 let amount = 10;
-// initPool(manager, price, fee, amount);
+initPool(manager, price, fee, amount);
 
 let pool_id = POOL_ID;
 let buyer = managerAccount;
