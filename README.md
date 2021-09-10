@@ -7,7 +7,7 @@ A Tool to sell Tickets on-chain.
 ```bash
 cd script
 npm install
-node main
+npm start
 ```
 
 ```bash
