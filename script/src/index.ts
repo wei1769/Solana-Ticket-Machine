@@ -1,6 +1,7 @@
-import { publicKey, u32, u64 } from "@project-serum/borsh";
+import { publicKey, struct, u32, u64, u8 } from "@project-serum/borsh";
 import {
   Account,
+  AccountMeta,
   Connection,
   PublicKey,
   sendAndConfirmTransaction,
@@ -8,9 +9,13 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { struct, u8 } from "buffer-layout";
+import { TokenAmount } from "./math";
 
-const POOL_MANAGER_PUBLIC_KEY = "5fAMqkBNEaqLpZK8Vy63yS4QpiYA943pDMVsAQvA6VGa";
+// TODO
+const manager_private_key = [];
+const managerAccount = new Account(manager_private_key);
+
+const POOL_ID = "D9ioyVKEQkjbEpQFcQPDHQkTCfuKJU8QLzN6xcbr7LAe";
 const TICKET_PUBLIC_KEY = "AUaGuQhpjttMdBmejoboMoUMrpcxNHZsT44C6jupLYNP";
 const FEE_RECEIVER_PUBLIC_KEY = "2wnEcArzCpX1QRdtpHRXxZ7k9b1UeK16mPt26LPWFZ6V";
 
@@ -20,12 +25,13 @@ const connection = new Connection(
   "singleGossip"
 );
 
-const accountInfo = await connection.getAccountInfo(
-  new PublicKey(POOL_MANAGER_PUBLIC_KEY)
-);
-const { lamports } = accountInfo;
-
-console.log("lamports", lamports);
+// async function getLamports() {
+//   const accountInfo = await connection.getAccountInfo(
+//     new PublicKey(POOL_MANAGER_PUBLIC_KEY)
+//   );
+//   const { lamports } = accountInfo;
+//   console.log("lamports", lamports);
+// }
 
 // referenced from program/src/state.rs Pool struct
 const POOL_LAYOUT = struct([
@@ -47,37 +53,44 @@ const TICKET_LAYOUT = struct([
 ]);
 
 // let { transaction, poolKeyPair } = initPool();
-export async function initPool(manger, price, fee, total_amount) {
+export async function initPool(
+  managerAccount: Account,
+  price: number,
+  fee: number,
+  total_amount: number
+) {
   // ticket program Id is hard-coded
   const ticketProgramId = new PublicKey(TICKET_PUBLIC_KEY);
-  console.log("ticketProgramId", ticketProgramId);
+  // console.log("ticketProgramId", ticketProgramId);
 
   // create new public key for pool
   const newPoolAccount = new Account();
   let poolPublicKey = newPoolAccount.publicKey;
-  console.log("pomangerolPublicKey", poolPublicKey);
-
-  console.log("manager", new PublicKey(manager));
+  // console.log("poolPublicKey", poolPublicKey);
 
   // add create account instruction to transaction
   const transaction = new Transaction();
   transaction.add(
     SystemProgram.createAccount({
-      fromPubkey: new PublicKey(manger),
+      fromPubkey: managerAccount.publicKey,
       newAccountPubkey: poolPublicKey,
-      lamports:
-        lamports ??
-        (await connection.getMinimumBalanceForRentExemption(POOL_LAYOUT.span)),
+      lamports: await connection.getMinimumBalanceForRentExemption(
+        POOL_LAYOUT.span
+      ),
       space: POOL_LAYOUT.span,
-      ticketProgramId,
+      programId: ticketProgramId,
     })
   );
 
   // prepare keys
-  const keys = [
+  const keys: AccountMeta[] = [
     { pubkey: poolPublicKey, isSigner: true, isWritable: true },
-    { pubkey: manger, isSigner: true, isWritable: true },
-    { pubkey: FEE_RECEIVER_PUBLIC_KEY, isSigner: false, isWritable: true },
+    { pubkey: managerAccount.publicKey, isSigner: true, isWritable: true },
+    {
+      pubkey: new PublicKey(FEE_RECEIVER_PUBLIC_KEY),
+      isSigner: false,
+      isWritable: true,
+    },
   ];
 
   // prepare data
@@ -92,9 +105,9 @@ export async function initPool(manger, price, fee, total_amount) {
   dataLayout.encode(
     {
       instruction: 0,
-      price,
-      fee,
-      total_amount,
+      price: new TokenAmount(price),
+      fee: new TokenAmount(fee),
+      total_amount: new TokenAmount(total_amount),
     },
     data
   );
@@ -103,22 +116,27 @@ export async function initPool(manger, price, fee, total_amount) {
   transaction.add(
     new TransactionInstruction({
       keys,
-      ticketProgramId,
+      programId: ticketProgramId,
       data,
     })
   );
 
   // return { transaction, newPoolAccount };
 
-  await sendAndConfirmTransaction(connection, transaction, [newPoolAccount], {
-    skipPreflight: false,
-    commitment: "recent",
-    preflightCommitment: "recent",
-  });
+  await sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [newPoolAccount, managerAccount],
+    {
+      skipPreflight: false,
+      commitment: "recent",
+      preflightCommitment: "recent",
+    }
+  );
 }
 
 // let { transaction, ticketKeyPair } = buy();
-export async function buy(pool_id, buyer) {
+export async function buy(pool_id: string, buyer: Account) {
   const ticketProgramId = new PublicKey(TICKET_PUBLIC_KEY);
 
   // create new public key for ticket
@@ -129,15 +147,13 @@ export async function buy(pool_id, buyer) {
   const transaction = new Transaction();
   transaction.add(
     SystemProgram.createAccount({
-      fromPubkey: new PublicKey(buyer),
+      fromPubkey: buyer.publicKey,
       newAccountPubkey: ticketPublicKey,
-      lamports:
-        lamports ??
-        (await connection.getMinimumBalanceForRentExemption(
-          TICKET_LAYOUT.span
-        )),
+      lamports: await connection.getMinimumBalanceForRentExemption(
+        TICKET_LAYOUT.span
+      ),
       space: TICKET_LAYOUT.span,
-      ticketProgramId,
+      programId: ticketProgramId,
     })
   );
 
@@ -156,12 +172,12 @@ export async function buy(pool_id, buyer) {
 }
 
 // I'm the pool manager, so fill in my own public key
-let manager = POOL_MANAGER_PUBLIC_KEY;
+let manager = managerAccount;
 let price = 696969;
 let fee = 23;
 let amount = 10;
 initPool(manager, price, fee, amount);
 
-let pool_id = "D9ioyVKEQkjbEpQFcQPDHQkTCfuKJU8QLzN6xcbr7LAe";
-let buyer = POOL_MANAGER_PUBLIC_KEY;
+let pool_id = POOL_ID;
+let buyer = managerAccount;
 buy(pool_id, buyer);

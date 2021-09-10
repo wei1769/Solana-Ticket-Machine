@@ -2,11 +2,11 @@
   "name": "script",
   "version": "1.0.0",
   "description": "",
-  "main": "main.js",
+  "main": "src/index.ts",
   "scripts": {
+    "start": "ts-node ./src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "type": "module",
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -14,5 +14,11 @@
     "@solana/web3.js": "^1.26.0",
     "bignumber.js": "^9.0.1",
     "buffer-layout": "^1.2.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/node": "^16.9.1",
+    "ts-node": "^10.2.1",
+    "typescript": "^4.4.2"
   }
 }
