@@ -129,7 +129,7 @@ export async function buy(pool_id, buyer) {
   const transaction = new Transaction();
   transaction.add(
     SystemProgram.createAccount({
-      fromPubkey: buyer,
+      fromPubkey: new PublicKey(buyer),
       newAccountPubkey: ticketPublicKey,
       lamports:
         lamports ??
@@ -161,3 +161,7 @@ let price = 696969;
 let fee = 23;
 let amount = 10;
 initPool(manager, price, fee, amount);
+
+let pool_id = "D9ioyVKEQkjbEpQFcQPDHQkTCfuKJU8QLzN6xcbr7LAe";
+let buyer = POOL_MANAGER_PUBLIC_KEY;
+buy(pool_id, buyer);
