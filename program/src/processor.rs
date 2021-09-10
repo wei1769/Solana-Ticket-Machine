@@ -1,18 +1,19 @@
 use crate::{
+    check_program_account,
+    check_fee_account,
     error::TicketMachineError,
     instruction::TicketSellingPoolInstructions,
     state::{Pool, Ticket},
-    check_program_account
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
-    entrypoint::ProgramResult,msg,
+    entrypoint::ProgramResult,
+    msg,
     program::invoke,
     program_error::ProgramError,
-    program_pack::{ Pack},
+    program_pack::Pack,
     pubkey::Pubkey,
     system_instruction::{self},
-    
 };
 
 pub struct Processor;
@@ -24,7 +25,7 @@ impl Processor {
         instruction_data: &[u8],
     ) -> ProgramResult {
         let instruction = TicketSellingPoolInstructions::unpack(instruction_data)?;
-        msg!(&*format!("program id: {}",program_id));
+        msg!(&*format!("program id: {}", program_id));
         check_program_account(program_id)?;
         match instruction {
             TicketSellingPoolInstructions::InitPool {
@@ -54,7 +55,7 @@ impl Processor {
         let manager = next_account_info(account_info_iter)?;
         let fee_receiver = next_account_info(account_info_iter)?;
         let mut pool_info = Pool::unpack_unchecked(&pool_id.data.borrow())?;
-
+        check_program_account(pool_id.key)?;
         if pool_info.account_type != 0 {
             return Err(ProgramError::AccountAlreadyInitialized);
         }
@@ -66,10 +67,13 @@ impl Processor {
         }
 
         if fee > 100 {
-            msg!("fee is over 100");
+            msg!("fee is over 100%");
+            return Err(ProgramError::InvalidAccountData);
+        } else if fee < 5 {
+            msg!("fee must be over 5%");
             return Err(ProgramError::InvalidAccountData);
         }
-
+        check_fee_account(fee_receiver.key)?;
         pool_info.account_type = 1;
         pool_info.manager = *manager.key;
         pool_info.fee_reciever = *fee_receiver.key;
@@ -100,68 +104,56 @@ impl Processor {
             msg!("All account should be writable");
             return Err(TicketMachineError::AccountNotWritable.into());
         }
+        check_program_account(pool_id.key)?;
+        let mut pool_info = Pool::unpack_unchecked(&pool_id.data.borrow())?;
 
-        let mut pool_info = 
-            Pool::unpack_unchecked(
-                &pool_id.data.borrow())?;
-
-
-        let mut ticket_info = 
-            Ticket::unpack_unchecked(
-                &ticket_account.data.borrow())?;
+        let mut ticket_info = Ticket::unpack_unchecked(&ticket_account.data.borrow())?;
 
         let current_number = pool_info.current_number.clone();
-        if current_number >= pool_info.total_amount.clone(){
+        if current_number >= pool_info.total_amount.clone() {
             msg!("Pool is Sold out");
-           return Err(TicketMachineError::PoolSoldOut.into());
+            return Err(TicketMachineError::PoolSoldOut.into());
         }
-        if !(fee_receiver.key.clone() == pool_info.fee_reciever.clone() &&
-            destination.key.clone() == pool_info.manager.clone()){
-                return Err(ProgramError::InvalidAccountData);
+        if !(fee_receiver.key.clone() == pool_info.fee_reciever.clone()
+            && destination.key.clone() == pool_info.manager.clone())
+        {
+            return Err(ProgramError::InvalidAccountData);
         }
         if pool_info.account_type.clone() != 1 {
             return Err(ProgramError::InvalidAccountData);
         }
 
-        let fee_amount:u64 = pool_info.price*u64::from(pool_info.fee) / 100  ;
+        let fee_amount: u64 = pool_info.price * u64::from(pool_info.fee) / 100;
 
-        let pay_amount:u64 = pool_info.price - fee_amount;
-        msg!(&*format!("pay: {:?} fee: {:?}",pay_amount,fee_amount));
+        let pay_amount: u64 = pool_info.price - fee_amount;
+        msg!(&*format!("pay: {:?} fee: {:?}", pay_amount, fee_amount));
 
         let transfer_lamport_ix =
-            system_instruction::transfer(
-                &buyer.key.clone(),
-                 &destination.key.clone(),
-                 pay_amount);
+            system_instruction::transfer(&buyer.key.clone(), &destination.key.clone(), pay_amount);
         invoke(
             &transfer_lamport_ix,
-            &[buyer.clone(),destination.clone(),sys_program.clone()],
+            &[buyer.clone(), destination.clone(), sys_program.clone()],
         )?;
 
         let transfer_fee_lamport_ix =
-        system_instruction::transfer(
-            &buyer.key.clone(),
-             &fee_receiver.key.clone(),
-             fee_amount);
+            system_instruction::transfer(&buyer.key.clone(), &fee_receiver.key.clone(), fee_amount);
         invoke(
             &transfer_fee_lamport_ix,
-            &[buyer.clone(),fee_receiver.clone(),sys_program.clone()],
+            &[buyer.clone(), fee_receiver.clone(), sys_program.clone()],
         )?;
         let ticket_number = current_number + 1;
-        msg!(&*format!("Your Ticket number: {:?}, Pool id: {:?}",ticket_number, pool_id.key));
+        msg!(&*format!(
+            "Your Ticket number: {:?}, Pool id: {:?}",
+            ticket_number, pool_id.key
+        ));
         ticket_info.account_type = 2;
         ticket_info.pool_id = *pool_id.key;
         ticket_info.ticketbuyer = *buyer.key;
         ticket_info.ticketnumber = ticket_number;
         pool_info.current_number = ticket_number;
-        Pool::pack(
-            pool_info, 
-            &mut pool_id.data.borrow_mut())?;
-       
-        Ticket::pack(
-            ticket_info, 
-            &mut ticket_account.data.borrow_mut())?;
+        Pool::pack(pool_info, &mut pool_id.data.borrow_mut())?;
 
+        Ticket::pack(ticket_info, &mut ticket_account.data.borrow_mut())?;
 
         Ok(())
     }

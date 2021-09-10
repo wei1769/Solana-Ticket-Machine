@@ -6,15 +6,15 @@ pub enum TicketSellingPoolInstructions {
     ///Init a ticket pool
     /// 0.`[writable,signer]` Create a new pool with this account, this will be the pool id
     /// 1.`[writable,signer]` Sol account that is the manager to receive the payment
-    /// 2.`[writable]` Fee receiver account to pay to
+    /// 2.`[writable]` Fee receiver const "2wnEcArzCpX1QRdtpHRXxZ7k9b1UeK16mPt26LPWFZ6V"
     InitPool {
         price: u64,        //in Lamport
-        fee: u8,           //in percentage
+        fee: u8,           //in percentage must at least 5%
         total_amount: u64, //total amount you wanted to sell
     },
     /// 0.`[writable]` pool id
     /// 1.`[writable]` Sol account to receive the payment
-    /// 2.`[writable]` Fee receiver account to pay to
+    /// 2.`[writable]` Fee receiver const "2wnEcArzCpX1QRdtpHRXxZ7k9b1UeK16mPt26LPWFZ6V"
     /// 3.`[writable,signer]` Ticket account
     /// 4.`[writable,signer]` Wallet to Pay Sol and buy a Ticket
     /// 5.`[]`System Program
