@@ -14,7 +14,7 @@ pub struct Pool {
     pub fee: u8,//size:1
     pub current_number: u64//size:8
 
-    //Pool account size should be 90 Bytes
+    //Pool account size should be 95 Bytes
 }
 pub struct Ticket{
     pub account_type: u8,//2 is Ticket size:1
