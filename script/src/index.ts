@@ -1,4 +1,4 @@
-import { publicKey, struct, u32, u64, u8 } from "@project-serum/borsh";
+import { publicKey, struct, u64, u8 } from "@project-serum/borsh";
 import {
   Account,
   AccountInfo,
@@ -38,7 +38,7 @@ const connection = new Connection(
 // referenced from program/src/state.rs Pool struct
 const POOL_LAYOUT = struct([
   u8("account_type"),
-  u32("manager"),
+  publicKey("manager"),
   publicKey("fee_reciever"),
   u64("total_amount"),
   u64("price"),
@@ -245,13 +245,11 @@ export async function buy(pool_id: string, buyer: Account) {
     },
   ];
 
-  const dataLayout = struct([u8("instruction"), u64("pay"), u64("fee")]);
+  const dataLayout = struct([u8("instruction")]);
   const data = Buffer.alloc(dataLayout.span);
   dataLayout.encode(
     {
       instruction: 1,
-      pay: new BN(parsePoolInfoData(poolInfo.data).price),
-      fee: new BN(parsePoolInfoData(poolInfo.data).fee),
     },
     data
   );
