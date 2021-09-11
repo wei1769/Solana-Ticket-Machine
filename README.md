@@ -6,12 +6,12 @@ A Tool to sell Tickets on-chain.
 
 ```bash
 cd script
-npm install
-npm start
+yarn 
+yarn start
 ```
 
 ```bash
 cd cli
 cargo clean
-cargo run D9ioyVKEQkjbEpQFcQPDHQkTCfuKJU8QLzN6xcbr7LAe
+cargo run <Pool id>
 ```
