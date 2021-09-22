@@ -10,8 +10,8 @@ pub mod entrypoint;
 
 solana_program::declare_id!("AUaGuQhpjttMdBmejoboMoUMrpcxNHZsT44C6jupLYNP");
 /// Checks that the supplied program ID is the correct one for SPL-token
-pub fn check_program_account(spl_token_program_id: &Pubkey) -> ProgramResult {
-    if spl_token_program_id != &id() {
+pub fn check_program_account(ticket_program_id: &Pubkey) -> ProgramResult {
+    if ticket_program_id != &id() {
         return Err(ProgramError::IncorrectProgramId);
     }
     Ok(())
